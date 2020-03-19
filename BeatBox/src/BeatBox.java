@@ -1,6 +1,7 @@
 import java.awt.*;
 import javax.swing.*;
 import javax.sound.midi.*;
+import java.io.*;
 import java.util.*;
 import java.awt.event.*;
 
@@ -46,6 +47,14 @@ public class BeatBox {
         downTempo.addActionListener(new MyDownTempoListener());
         buttonBox.add(downTempo);
 
+        JButton serializeIt = new JButton("SerializeIt");
+        serializeIt.addActionListener(new MySendListener());
+        buttonBox.add(serializeIt);
+
+        JButton restore = new JButton("Restore");
+        restore.addActionListener(new MyReadInListener());
+        buttonBox.add(restore);
+
         Box nameBox = new Box(BoxLayout.Y_AXIS);
         for (int i = 0; i < 16; i++) {
             nameBox.add(new Label(instrumentNames[i]));
@@ -74,6 +83,27 @@ public class BeatBox {
         theFrame.setBounds(50, 50, 300, 300);
         theFrame.pack();
         theFrame.setVisible(true);
+
+        // Set up the file system
+        JMenuBar menuBar = new JMenuBar();
+        JMenu fileMenu = new JMenu("File");
+        JMenuItem newMenuItem = new JMenuItem("New");
+        JMenuItem openMenuItem = new JMenuItem("Open");
+        JMenuItem saveMenuItem = new JMenuItem("Save");
+
+        // Menu listeners for saving and opening files
+        newMenuItem.addActionListener(new NewMenuListener());
+        openMenuItem.addActionListener(new OpenMenuListener());
+        saveMenuItem.addActionListener(new SaveMenuListener());
+
+        // Add menu buttons to main bar
+        fileMenu.add(newMenuItem);
+        fileMenu.add(openMenuItem);
+        fileMenu.add(saveMenuItem);
+
+        // Add main bar to the frame
+        menuBar.add(fileMenu);
+        theFrame.setJMenuBar(menuBar);
 
     }
 
@@ -166,6 +196,127 @@ public class BeatBox {
         } catch(Exception e) { e.printStackTrace(); }
 
         return event;
+    }
+
+    private class NewMenuListener implements ActionListener {
+        public void actionPerformed(ActionEvent event) {
+
+        }
+    }
+
+    private class OpenMenuListener implements ActionListener {
+        public void actionPerformed(ActionEvent event) {
+            JFileChooser fileOpen = new JFileChooser();
+            fileOpen.showOpenDialog(theFrame);
+            loadFile(fileOpen.getSelectedFile());
+        }
+    }
+
+    // Save using main menu nav
+    private class SaveMenuListener implements ActionListener {
+        public void actionPerformed(ActionEvent event) {
+
+            JFileChooser fileSave = new JFileChooser();
+            fileSave.showSaveDialog(theFrame);
+            saveFile(fileSave.getSelectedFile());
+        }
+    }
+
+    private void saveFile(File file) {
+        try {
+            BufferedWriter writer = new BufferedWriter(new FileWriter(file));
+
+
+            for (int i = 0; i < 256; i++) {
+                JCheckBox check = (JCheckBox)checkboxList.get(i);
+                if(check.isSelected()) {
+                    writer.write(1 + "\n");
+                }else{
+                    writer.write(0 + "\n");
+                }
+            }
+
+            writer.close();
+
+        } catch (IOException ex) {
+            System.out.println("Couldn't write the BeatBox to file");
+            ex.printStackTrace();
+        }
+    }
+
+    // Open a saved file
+    private void loadFile(File file) {
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+//            checkboxList.clear();
+            String line = null;
+            int i = 0;
+            JCheckBox check = new JCheckBox();
+            while ((line = reader.readLine()) != null){
+                System.out.println(Integer.valueOf(line));
+                if(Integer.valueOf(line) == 1){
+                    check.setSelected(true);
+                    checkboxList.add(check);
+                }else {
+                    check.setSelected(false);
+                    checkboxList.add(check);
+                }
+                i++;
+            }
+
+            reader.close();
+
+        } catch (Exception ex){
+            System.out.println("Couldn't read the BeatBox file");
+            ex.printStackTrace();
+        }
+    }
+
+    // Save using Serializing
+    public class MySendListener implements ActionListener {
+        public void actionPerformed(ActionEvent a) {
+            boolean[] checkboxState = new boolean[256];
+
+            for (int i = 0; i < 256; i++) {
+                JCheckBox check = (JCheckBox)checkboxList.get(i);
+                if(check.isSelected()) {
+                    checkboxState[i] = true;
+                }
+            }
+
+            try {
+                FileOutputStream fileStream = new FileOutputStream(new File("Checkbox.ser"));
+                ObjectOutputStream os = new ObjectOutputStream(fileStream);
+                os.writeObject(checkboxState);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    public class MyReadInListener implements ActionListener {
+        public void actionPerformed(ActionEvent a) {
+            boolean[] checkboxState = null;
+            try {
+                FileInputStream fileIn = new FileInputStream(new File("Checkbox.ser"));
+                ObjectInputStream is = new ObjectInputStream(fileIn);
+                checkboxState = (boolean[]) is.readObject();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+
+            for (int i = 0; i < 256; i++) {
+                JCheckBox check = (JCheckBox) checkboxList.get(i);
+                if(checkboxState[i]) {
+                    check.setSelected(true);
+                } else {
+                    check.setSelected(false);
+                }
+            }
+
+            sequencer.stop();
+            buildTrackAndStart();
+        }
     }
 
 }
