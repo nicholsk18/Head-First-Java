@@ -246,30 +246,34 @@ public class BeatBox {
 
     // Open a saved file
     private void loadFile(File file) {
+        String[] checkboxState = new String[256];
         try {
             BufferedReader reader = new BufferedReader(new FileReader(file));
-//            checkboxList.clear();
             String line = null;
+
             int i = 0;
-            JCheckBox check = new JCheckBox();
             while ((line = reader.readLine()) != null){
-                System.out.println(Integer.valueOf(line));
-                if(Integer.valueOf(line) == 1){
-                    check.setSelected(true);
-                    checkboxList.add(check);
-                }else {
-                    check.setSelected(false);
-                    checkboxList.add(check);
-                }
+                checkboxState[i] = line;
                 i++;
             }
 
             reader.close();
-
         } catch (Exception ex){
             System.out.println("Couldn't read the BeatBox file");
             ex.printStackTrace();
         }
+
+            for (int i = 0; i < 256; i++) {
+                JCheckBox check = checkboxList.get(i);
+                if(Integer.valueOf(checkboxState[i]) == 1){
+                    check.setSelected(true);
+                } else {
+                    check.setSelected(false);
+                }
+            }
+            sequencer.stop();
+            buildTrackAndStart();
+
     }
 
     // Save using Serializing
